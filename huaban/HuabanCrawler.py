@@ -35,12 +35,18 @@ class HuabanCrawler():
         appPins = prog.findall(htmlPage)
         # 将js中的null定义为Python中的None
         null = None
+        true = True
+        if appPins == []:
+            return None
         result = eval(appPins[0][19:-1])
         for i in result:
             info = {}
             info['id'] = str(i['pin_id'])
             info['url'] = "http://img.hb.aicdn.com/" + i["file"]["key"] + "_fw658"
-            info['type'] = i["file"]["type"][6:]
+            if 'image' == i["file"]["type"][:5]:
+                info['type'] = i["file"]["type"][6:]
+            else:
+                info['type'] = 'NoName'
             self.images.append(info)
 
     def __save_image(self, imageName, content):
@@ -57,13 +63,18 @@ class HuabanCrawler():
 
     def down_images(self):
         """ 下载图片 """
-        for image in self.images:
-            req = requests.get(image["url"])
+        print "{} image will be download".format(len(self.images))
+        for key, image in enumerate(self.images):
+            print 'download {0} ...'.format(key)
+            try:
+                req = requests.get(image["url"])
+            except :
+                print 'error'
             imageName = os.path.join("./images", image["id"] + "." + image["type"])
             self.__save_image(imageName, req.content)
 
 
 if __name__ == '__main__':
     hc = HuabanCrawler()
-    hc.get_image_info(21)
+    hc.get_image_info(200)
     hc.down_images()
