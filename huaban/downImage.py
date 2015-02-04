@@ -4,6 +4,8 @@
 
 import requests
 import re
+import os
+import os.path
 
 class HuabanCrawler():
     """ """
@@ -11,8 +13,9 @@ class HuabanCrawler():
     def __init__(self):
         """ """
         self.homeUrl = "http://huaban.com/favorite/beauty/"
-        self.appPins = []
-        self.imageUrls = []
+        self.images = []
+        if not os.path.exists('./images'):
+            os.mkdir('./images')
 
     def __load_homePage(self):
         return requests.get(url = self.homeUrl).content
@@ -32,23 +35,31 @@ class HuabanCrawler():
         null = None
         result = eval(appPins[0][19:-1])
         for i in result:
-            self.appPins.append(i['pin_id'])
-            self.imageUrls.append("http://img.hb.aicdn.com/" + i["file"]["key"] + "_fw658")
+            info = {}
+            info['id'] = str(i['pin_id'])
+            info['url'] = "http://img.hb.aicdn.com/" + i["file"]["key"] + "_fw658"
+            info['type'] = i["file"]["type"][6:]
+            self.images.append(info)
 
     def __save_image(self, imageName, content):
-        with open(imageName+'.jpeg', 'wb') as fp:
+        with open(imageName, 'wb') as fp:
             fp.write(content)
 
-    def downImages(self):
+    def get_image_info(self, num):
         """ """
         self.__process_data(self.__load_homePage())
-        for key, url in zip(self.appPins, self.imageUrls):
-            print key, url
-            req = requests.get(url)
-            self.__save_image(str(key), req.content)
+        for i in range((num-1)/20):
+            self.__process_data(self.__load_more(self.images[-1]['id']))
 
+    def down_images(self):
+        """ """
+        for image in self.images:
+            req = requests.get(image["url"])
+            imageName = os.path.join("./images", image["id"] + "." + image["type"])
+            self.__save_image(imageName, req.content)
 
 
 if __name__ == '__main__':
     hc = HuabanCrawler()
-    hc.downImages()
+    hc.get_image_info(21)
+    hc.down_images()
